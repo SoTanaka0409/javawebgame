@@ -27,6 +27,57 @@ let comboCount = 0;
 const boardElement = document.getElementById('game-board');
 const scoreElement = document.getElementById('score');
 
+// --- Audio System ---
+let audioCtx = null;
+
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+
+function playTone(freq, type, duration, vol = 0.1) {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    
+    gainNode.gain.setValueAtTime(vol, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+function playSwapSound() {
+    playTone(400, 'sine', 0.1, 0.05);
+}
+
+function playMatchSound(combo) {
+    // コンボごとに音程が上がる
+    const freq = 440 * Math.pow(1.059463, combo * 2); 
+    playTone(freq, 'square', 0.15, 0.08);
+}
+
+function playDamageSound() {
+    // ダメージ用のノイズっぽい音（低いノコギリ波を短く）
+    playTone(100, 'sawtooth', 0.2, 0.15);
+    setTimeout(() => playTone(120, 'sawtooth', 0.2, 0.15), 50);
+}
+
+function playHealSound() {
+    // ピロリロンという回復音
+    setTimeout(() => playTone(523.25, 'sine', 0.1, 0.1), 0); // C5
+    setTimeout(() => playTone(659.25, 'sine', 0.1, 0.1), 100); // E5
+    setTimeout(() => playTone(783.99, 'sine', 0.2, 0.1), 200); // G5
+}
+// --------------------
+
 function initBoard() {
     for (let r = 0; r < BOARD_SIZE; r++) {
         board[r] = [];
@@ -38,6 +89,13 @@ function initBoard() {
 }
 
 function startGame() {
+    initAudio();
+    const bgm = document.getElementById('bgm');
+    if (bgm) {
+        bgm.volume = 0.3;
+        bgm.play().catch(e => console.log("BGM file not found or autoplay blocked."));
+    }
+
     document.getElementById('title-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('flex');
@@ -69,6 +127,11 @@ function showResult(isWin) {
 }
 
 function returnToTitle() {
+    const bgm = document.getElementById('bgm');
+    if (bgm) {
+        bgm.pause();
+        bgm.currentTime = 0;
+    }
     document.getElementById('result-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('flex');
     document.getElementById('title-screen').classList.remove('hidden');
@@ -135,6 +198,7 @@ function handleCellClick(r, c, el) {
 
 function swap(r1, c1, r2, c2) {
     [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+    playSwapSound();
     renderBoard();
     isProcessingTurn = true;
     setTimeout(checkMatches, 300);
@@ -193,6 +257,7 @@ function checkMatches() {
         if (comboCount > 1) {
             showPopup('player-container', `${comboCount} COMBO!`, '#ffff00');
         }
+        playMatchSound(comboCount);
         
         scoreElement.innerText = score;
 
@@ -201,6 +266,7 @@ function checkMatches() {
             playerHP += healAmount;
             if (playerHP > playerMaxHP) playerHP = playerMaxHP;
             updateHP();
+            playHealSound();
             showPopup('player-container', `+${healAmount}`, '#33ff33');
         }
 
@@ -360,7 +426,10 @@ function playEnemyDamageAnimation(damage, isPoison) {
         void enemyImg.offsetWidth;
         enemyImg.classList.add('anim-damage');
     }
-    if (!isPoison) showSlashEffect('enemy-container');
+    if (!isPoison) {
+        showSlashEffect('enemy-container');
+        playDamageSound();
+    }
     showPopup('enemy-container', `-${damage}`, isPoison ? '#a855f7' : '#ff3333');
 }
 
@@ -381,6 +450,7 @@ function playEnemyAttackAnimation(damage) {
             playerImg.classList.add('anim-damage');
         }
         showSlashEffect('player-container');
+        playDamageSound();
         showPopup('player-container', `-${damage}`, '#ff3333');
     }, 150);
 }
