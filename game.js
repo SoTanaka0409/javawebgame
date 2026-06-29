@@ -167,6 +167,10 @@ function updateHP() {
 }
 
 function renderBoard() {
+    renderBoardWithDrops(null);
+}
+
+function renderBoardWithDrops(dropDistances) {
     boardElement.innerHTML = '';
     for (let r = 0; r < BOARD_SIZE; r++) {
         for (let c = 0; c < BOARD_SIZE; c++) {
@@ -175,6 +179,12 @@ function renderBoard() {
             cell.dataset.r = r;
             cell.dataset.c = c;
             cell.onclick = () => handleCellClick(r, c, cell);
+            
+            if (dropDistances && dropDistances[r][c] > 0) {
+                cell.style.setProperty('--drop-dist', dropDistances[r][c]);
+                cell.classList.add('anim-drop');
+            }
+            
             boardElement.appendChild(cell);
         }
     }
@@ -203,17 +213,19 @@ function swap(r1, c1, r2, c2) {
     playSwapSound();
     renderBoard();
     isProcessingTurn = true;
-    setTimeout(checkMatches, 300);
+    setTimeout(processCombos, 300);
 }
 
-function checkMatches() {
+const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function processCombos() {
     let found = false;
     let toRemove = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(false));
 
     // 横チェック
     for (let r = 0; r < BOARD_SIZE; r++) {
         for (let c = 0; c < BOARD_SIZE - 2; c++) {
-            if (board[r][c] === board[r][c+1] && board[r][c] === board[r][c+2]) {
+            if (board[r][c] && board[r][c] === board[r][c+1] && board[r][c] === board[r][c+2]) {
                 toRemove[r][c] = toRemove[r][c+1] = toRemove[r][c+2] = true;
                 found = true;
             }
@@ -222,109 +234,155 @@ function checkMatches() {
     // 縦チェック
     for (let c = 0; c < BOARD_SIZE; c++) {
         for (let r = 0; r < BOARD_SIZE - 2; r++) {
-            if (board[r][c] === board[r+1][c] && board[r][c] === board[r+2][c]) {
+            if (board[r][c] && board[r][c] === board[r+1][c] && board[r][c] === board[r+2][c]) {
                 toRemove[r][c] = toRemove[r+1][c] = toRemove[r+2][c] = true;
                 found = true;
             }
         }
     }
 
-    if (found) {
+    if (!found) {
+        if (isProcessingTurn) {
+            isProcessingTurn = false;
+            comboCount = 0;
+            turnsCount++;
+            updateStatusUI();
+            matchHappenedInTurn = false;
+            setTimeout(processTurnEnd, 500);
+        }
+        return;
+    }
+
+    // クラスターの抽出
+    let clusters = [];
+    let visited = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(false));
+    
+    function floodFill(r, c, color, currentCluster) {
+        if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return;
+        if (!toRemove[r][c] || visited[r][c] || board[r][c] !== color) return;
+        visited[r][c] = true;
+        currentCluster.push({r, c});
+        floodFill(r+1, c, color, currentCluster);
+        floodFill(r-1, c, color, currentCluster);
+        floodFill(r, c+1, color, currentCluster);
+        floodFill(r, c-1, color, currentCluster);
+    }
+
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if (toRemove[r][c] && !visited[r][c]) {
+                let cluster = [];
+                floodFill(r, c, board[r][c], cluster);
+                if (cluster.length >= 3) {
+                    cluster.color = board[r][c]; 
+                    clusters.push(cluster);
+                }
+            }
+        }
+    }
+
+    let totalDamage = 0;
+    let totalHeal = 0;
+    let totalPoison = 0;
+
+    for (let cluster of clusters) {
         comboCount++;
+        const color = cluster.color;
+        
         let damage = 0;
         let healAmount = 0;
         let poisonCount = 0;
 
-        for(let r=0; r<BOARD_SIZE; r++) {
-            for(let c=0; c<BOARD_SIZE; c++) {
-                if(toRemove[r][c]) {
-                    const color = board[r][c];
-                    if (color === 'bg-green-500') healAmount += 5;
-                    else if (color === 'bg-purple-500') poisonCount += 1;
-                    else if (color === 'bg-red-500') damage += 7.5; // 赤は1.5倍ダメージ
-                    else damage += 5;
-                    
-                    board[r][c] = null;
-                    score += 10;
-                    matchHappenedInTurn = true;
-                }
-            }
+        for (let cell of cluster) {
+            if (color === 'bg-green-500') healAmount += 5;
+            else if (color === 'bg-purple-500') poisonCount += 1;
+            else if (color === 'bg-red-500') damage += 7.5; 
+            else damage += 5;
+            
+            const domCell = boardElement.querySelector(`[data-r="${cell.r}"][data-c="${cell.c}"]`);
+            if (domCell) domCell.classList.add('anim-pop');
         }
-        
-        // コンボによる倍率 (1コンボ増えるごとに+30%ボーナス)
+
         const comboMultiplier = 1 + (comboCount - 1) * 0.3;
-        damage *= comboMultiplier;
-        healAmount = Math.floor(healAmount * comboMultiplier);
+        totalDamage += damage * comboMultiplier;
+        totalHeal += Math.floor(healAmount * comboMultiplier);
+        totalPoison += poisonCount;
+        
+        score += cluster.length * 10 * comboMultiplier;
+        matchHappenedInTurn = true;
         
         if (comboCount > 1) {
             showPopup('player-container', `${comboCount} COMBO!`, '#ffff00');
         }
         playMatchSound(comboCount);
-        
-        scoreElement.innerText = score;
+        scoreElement.innerText = Math.floor(score);
 
-        // プレイヤー回復
-        if (healAmount > 0) {
-            playerHP += healAmount;
-            if (playerHP > playerMaxHP) playerHP = playerMaxHP;
-            updateHP();
-            playHealSound();
-            showPopup('player-container', `+${healAmount}`, '#33ff33');
-        }
+        await sleep(300);
+    }
 
-        // 毒付与
-        if (poisonCount > 0) {
-            poisonTurns += 3; // 3ターン毒
-            updateStatusUI();
-        }
-
-        // 敵にダメージを与える
-        if (damage > 0 && enemyHP > 0) {
-            const finalDamage = Math.floor(damage);
-            enemyHP -= finalDamage;
-            if (enemyHP <= 0) enemyHP = 0;
-            updateHP();
-            
-            playPlayerAttackAnimation(finalDamage);
-            
-            if (enemyHP === 0) {
-                setTimeout(handleEnemyDefeat, 1500);
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if(toRemove[r][c]) {
+                board[r][c] = null;
             }
         }
-
-        dropBlocks();
-        renderBoard();
-        if (enemyHP > 0) {
-            setTimeout(checkMatches, 300);
-        }
-    } else {
-        if (isProcessingTurn) {
-            isProcessingTurn = false;
-            comboCount = 0; // コンボ数リセット
-            turnsCount++;
-            updateStatusUI();
-            matchHappenedInTurn = false;
-            
-            // ターン終了処理
-            setTimeout(processTurnEnd, 500);
-        }
     }
+
+    if (totalHeal > 0) {
+        playerHP += totalHeal;
+        if (playerHP > playerMaxHP) playerHP = playerMaxHP;
+        updateHP();
+        playHealSound();
+        showPopup('player-container', `+${totalHeal}`, '#33ff33');
+    }
+    if (totalPoison > 0) {
+        poisonTurns += 3;
+        updateStatusUI();
+    }
+    if (totalDamage > 0 && enemyHP > 0) {
+        const finalDamage = Math.floor(totalDamage);
+        enemyHP -= finalDamage;
+        if (enemyHP <= 0) enemyHP = 0;
+        updateHP();
+        playPlayerAttackAnimation(finalDamage);
+    }
+
+    if (enemyHP === 0) {
+        setTimeout(handleEnemyDefeat, 1500);
+        return; 
+    }
+
+    let dropDistances = dropBlocks();
+    renderBoardWithDrops(dropDistances);
+    
+    await sleep(400); 
+    processCombos();
 }
 
 function dropBlocks() {
+    let dropDistances = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(0));
+    
     for (let c = 0; c < BOARD_SIZE; c++) {
         let writeRow = BOARD_SIZE - 1;
+        let nullCount = 0;
         for (let r = BOARD_SIZE - 1; r >= 0; r--) {
-            if (board[r][c] !== null) {
+            if (board[r][c] === null) {
+                nullCount++;
+            } else {
                 board[writeRow][c] = board[r][c];
-                if (writeRow !== r) board[r][c] = null;
+                if (writeRow !== r) {
+                    board[r][c] = null;
+                    dropDistances[writeRow][c] = writeRow - r;
+                }
                 writeRow--;
             }
         }
         for (let r = writeRow; r >= 0; r--) {
             board[r][c] = COLORS[Math.floor(Math.random() * COLORS.length)];
+            dropDistances[r][c] = nullCount;
         }
     }
+    return dropDistances;
 }
 
 function processTurnEnd() {
