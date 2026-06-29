@@ -19,10 +19,84 @@
         }
         .cell:hover { transform: scale(1.05); }
         .selected { outline: 4px solid white; }
+        
+        /* アニメーション用クラス */
+        @keyframes attack {
+            0% { transform: translateX(0); }
+            50% { transform: translateX(50px) scale(1.1); }
+            100% { transform: translateX(0); }
+        }
+        @keyframes shake {
+            0% { transform: translateX(0); filter: brightness(1); }
+            25% { transform: translateX(-10px); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+            50% { transform: translateX(10px); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+            75% { transform: translateX(-10px); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+            100% { transform: translateX(0); filter: brightness(1); }
+        }
+        @keyframes popup {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+        }
+        
+        .anim-attack { animation: attack 0.3s ease-in-out; z-index: 10; position: relative; }
+        .anim-damage { animation: shake 0.3s ease-in-out; }
+        
+        .damage-popup {
+            position: absolute;
+            color: #ff3333;
+            font-size: 24px;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+            pointer-events: none;
+            animation: popup 1s ease-out forwards;
+            z-index: 50;
+            left: 50%;
+            top: 0;
+            margin-left: -20px;
+        }
+        
+        .character-img {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-white font-sans flex flex-col items-center justify-center min-h-screen">
     <h1 class="text-3xl font-bold mb-6 text-indigo-400">Gy楽試案パズル</h1>
+
+    <!-- Player & Enemy Status -->
+    <div class="flex w-full max-w-md justify-between mb-4 px-4">
+        <!-- Player -->
+        <div class="flex flex-col items-center w-5/12 relative" id="player-container">
+            <img src="player.png" id="player-img" class="character-img" alt="Player">
+            <span class="font-bold text-blue-300">Player</span>
+            <div class="w-full bg-slate-700 h-4 rounded-full mt-1 overflow-hidden">
+                <div id="player-hp-bar" class="bg-blue-500 h-full w-full transition-all duration-300"></div>
+            </div>
+            <span id="player-hp-text" class="text-xs mt-1">100 / 100</span>
+        </div>
+        <!-- VS -->
+        <div class="flex items-center justify-center w-2/12 font-bold text-xl text-slate-500 flex-col">
+            <span id="stage-indicator" class="text-xs text-indigo-300 mb-1">Stage 1/3</span>
+            <span>VS</span>
+            <span id="turn-counter" class="text-xs text-slate-400 mt-2">Turn: 0</span>
+        </div>
+        <!-- Enemy -->
+        <div class="flex flex-col items-center w-5/12 relative" id="enemy-container">
+            <img src="enemy.png" id="enemy-img" class="character-img" alt="Enemy">
+            <span id="enemy-name" class="font-bold text-red-300">Enemy</span>
+            <div class="w-full bg-slate-700 h-4 rounded-full mt-1 overflow-hidden">
+                <div id="enemy-hp-bar" class="bg-red-500 h-full w-full transition-all duration-300"></div>
+            </div>
+            <div class="flex justify-between w-full mt-1">
+                <span id="enemy-hp-text" class="text-xs">500 / 500</span>
+                <span id="enemy-status" class="text-xs text-purple-400 font-bold"></span>
+            </div>
+        </div>
+    </div>
+
     <div id="game-board" class="grid grid-cols-6 gap-2 bg-slate-800 p-4 rounded-xl shadow-2xl"></div>
     <div class="mt-6 text-xl font-bold">スコア: <span id="score">0</span></div>
     <p class="mt-4 text-slate-400 text-sm">隣り合う2つをクリックして入れ替えよう！</p>
@@ -33,6 +107,25 @@
         let board = [];
         let score = 0;
         let selectedCell = null;
+
+        // ステージ定義
+        const stages = [
+            { name: "スライム", hp: 200, attack: 10, attackTurn: 4, image: "enemy1.png" },
+            { name: "ゴーレム", hp: 500, attack: 20, attackTurn: 3, image: "enemy2.png" },
+            { name: "ドラゴン", hp: 1000, attack: 30, attackTurn: 2, image: "enemy.png" }
+        ];
+        let currentStageIndex = 0;
+
+        // HP管理変数
+        let playerMaxHP = 100;
+        let playerHP = 100;
+        let enemyMaxHP = stages[currentStageIndex].hp;
+        let enemyHP = enemyMaxHP;
+
+        let turnsCount = 0;
+        let poisonTurns = 0;
+        let isProcessingTurn = false;
+        let matchHappenedInTurn = false;
 
         const boardElement = document.getElementById('game-board');
         const scoreElement = document.getElementById('score');
@@ -45,6 +138,32 @@
                 }
             }
             renderBoard();
+        }
+
+        function initStage() {
+            const stageData = stages[currentStageIndex];
+            enemyMaxHP = stageData.hp;
+            enemyHP = enemyMaxHP;
+            poisonTurns = 0;
+            turnsCount = 0;
+            isProcessingTurn = false;
+            matchHappenedInTurn = false;
+            
+            document.getElementById('enemy-img').src = stageData.image;
+            document.getElementById('enemy-name').innerText = stageData.name;
+            document.getElementById('stage-indicator').innerText = `Stage ${currentStageIndex + 1}/${stages.length}`;
+            
+            initBoard();
+            updateHP();
+            updateStatusUI();
+        }
+
+        function updateHP() {
+            document.getElementById('player-hp-bar').style.width = `${Math.max(0, (playerHP / playerMaxHP) * 100)}%`;
+            document.getElementById('player-hp-text').innerText = `${Math.max(0, playerHP)} / ${playerMaxHP}`;
+            
+            document.getElementById('enemy-hp-bar').style.width = `${Math.max(0, (enemyHP / enemyMaxHP) * 100)}%`;
+            document.getElementById('enemy-hp-text').innerText = `${Math.max(0, enemyHP)} / ${enemyMaxHP}`;
         }
 
         function renderBoard() {
@@ -82,6 +201,7 @@
         function swap(r1, c1, r2, c2) {
             [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
             renderBoard();
+            isProcessingTurn = true;
             setTimeout(checkMatches, 300);
         }
 
@@ -109,18 +229,70 @@
             }
 
             if (found) {
+                let damage = 0;
+                let healAmount = 0;
+                let poisonCount = 0;
+
                 for(let r=0; r<BOARD_SIZE; r++) {
                     for(let c=0; c<BOARD_SIZE; c++) {
                         if(toRemove[r][c]) {
+                            const color = board[r][c];
+                            if (color === 'bg-green-500') healAmount += 5;
+                            else if (color === 'bg-purple-500') poisonCount += 1;
+                            else if (color === 'bg-red-500') damage += 7.5; // 赤は1.5倍ダメージ
+                            else damage += 5;
+                            
                             board[r][c] = null;
                             score += 10;
+                            matchHappenedInTurn = true;
                         }
                     }
                 }
                 scoreElement.innerText = score;
+
+                // プレイヤー回復
+                if (healAmount > 0) {
+                    playerHP += healAmount;
+                    if (playerHP > playerMaxHP) playerHP = playerMaxHP;
+                    updateHP();
+                    showPopup('player-container', `+${healAmount}`, '#33ff33');
+                }
+
+                // 毒付与
+                if (poisonCount > 0) {
+                    poisonTurns += 3; // 3ターン毒
+                    updateStatusUI();
+                }
+
+                // 敵にダメージを与える
+                if (damage > 0 && enemyHP > 0) {
+                    const finalDamage = Math.floor(damage);
+                    enemyHP -= finalDamage;
+                    if (enemyHP <= 0) enemyHP = 0;
+                    updateHP();
+                    
+                    playPlayerAttackAnimation(finalDamage);
+                    
+                    if (enemyHP === 0) {
+                        setTimeout(handleEnemyDefeat, 1500);
+                    }
+                }
+
                 dropBlocks();
                 renderBoard();
-                setTimeout(checkMatches, 300);
+                if (enemyHP > 0) {
+                    setTimeout(checkMatches, 300);
+                }
+            } else {
+                if (isProcessingTurn) {
+                    isProcessingTurn = false;
+                    turnsCount++;
+                    updateStatusUI();
+                    matchHappenedInTurn = false;
+                    
+                    // ターン終了処理
+                    setTimeout(processTurnEnd, 500);
+                }
             }
         }
 
@@ -140,7 +312,126 @@
             }
         }
 
-        initBoard();
+        function processTurnEnd() {
+            if (enemyHP <= 0 || playerHP <= 0) return;
+
+            let delay = 0;
+
+            // 毒ダメージ処理
+            if (poisonTurns > 0) {
+                poisonTurns--;
+                enemyHP -= 10;
+                if (enemyHP <= 0) enemyHP = 0;
+                updateHP();
+                updateStatusUI();
+                
+                playEnemyDamageAnimation(10, true);
+                delay = 800;
+
+                if (enemyHP === 0) {
+                    setTimeout(handleEnemyDefeat, 1000);
+                    return;
+                }
+            }
+
+            // 敵の攻撃
+            const stageData = stages[currentStageIndex];
+            if (turnsCount > 0 && turnsCount % stageData.attackTurn === 0) {
+                setTimeout(() => {
+                    const enemyDamage = stageData.attack;
+                    playerHP -= enemyDamage;
+                    if (playerHP <= 0) playerHP = 0;
+                    updateHP();
+                    
+                    playEnemyAttackAnimation(enemyDamage);
+                    
+                    if (playerHP === 0) {
+                        setTimeout(() => {
+                            alert("やられてしまった... Game Over");
+                            location.reload();
+                        }, 1500);
+                    }
+                }, delay);
+            }
+        }
+
+        function handleEnemyDefeat() {
+            if (currentStageIndex < stages.length - 1) {
+                alert(`${stages[currentStageIndex].name}を倒した！\nプレイヤーのHPが全回復し、次のステージへ進みます！`);
+                currentStageIndex++;
+                playerHP = playerMaxHP; // 全回復
+                initStage();
+            } else {
+                alert("すべての敵を倒した！ ゲーム完全クリア！\n最終スコア: " + score);
+                location.reload();
+            }
+        }
+
+        function updateStatusUI() {
+            const statusEl = document.getElementById('enemy-status');
+            if (statusEl) {
+                if (poisonTurns > 0) {
+                    statusEl.innerText = `毒(${poisonTurns})`;
+                } else {
+                    statusEl.innerText = '';
+                }
+            }
+            const turnEl = document.getElementById('turn-counter');
+            if (turnEl) turnEl.innerText = `Turn: ${turnsCount}`;
+        }
+
+        function showPopup(containerId, text, color) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const popup = document.createElement('div');
+            popup.className = 'damage-popup';
+            popup.innerText = text;
+            popup.style.color = color;
+            container.appendChild(popup);
+            setTimeout(() => popup.remove(), 1000);
+        }
+
+        function playPlayerAttackAnimation(damage) {
+            const playerImg = document.getElementById('player-img');
+            if (playerImg) {
+                playerImg.classList.remove('anim-attack');
+                void playerImg.offsetWidth;
+                playerImg.classList.add('anim-attack');
+            }
+            setTimeout(() => playEnemyDamageAnimation(damage, false), 150);
+        }
+
+        function playEnemyDamageAnimation(damage, isPoison) {
+            const enemyImg = document.getElementById('enemy-img');
+            if (enemyImg) {
+                enemyImg.classList.remove('anim-damage');
+                void enemyImg.offsetWidth;
+                enemyImg.classList.add('anim-damage');
+            }
+            showPopup('enemy-container', `-${damage}`, isPoison ? '#a855f7' : '#ff3333');
+        }
+
+        function playEnemyAttackAnimation(damage) {
+            const enemyImg = document.getElementById('enemy-img');
+            const playerImg = document.getElementById('player-img');
+            
+            if (enemyImg) {
+                enemyImg.style.animation = 'none';
+                void enemyImg.offsetWidth;
+                enemyImg.style.animation = 'attack 0.3s ease-in-out reverse';
+            }
+            
+            setTimeout(() => {
+                if (playerImg) {
+                    playerImg.classList.remove('anim-damage');
+                    void playerImg.offsetWidth;
+                    playerImg.classList.add('anim-damage');
+                }
+                showPopup('player-container', `-${damage}`, '#ff3333');
+            }, 150);
+        }
+
+        initStage();
     </script>
 </body>
 </html>
