@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gy楽試案パズル</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .cell {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+        .cell:hover { transform: scale(1.05); }
+        .selected { outline: 4px solid white; }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans flex flex-col items-center justify-center min-h-screen">
+    <h1 class="text-3xl font-bold mb-6 text-indigo-400">Gy楽試案パズル</h1>
+    <div id="game-board" class="grid grid-cols-6 gap-2 bg-slate-800 p-4 rounded-xl shadow-2xl"></div>
+    <div class="mt-6 text-xl font-bold">スコア: <span id="score">0</span></div>
+    <p class="mt-4 text-slate-400 text-sm">隣り合う2つをクリックして入れ替えよう！</p>
+
+    <script>
+        const BOARD_SIZE = 6;
+        const COLORS = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'];
+        let board = [];
+        let score = 0;
+        let selectedCell = null;
+
+        const boardElement = document.getElementById('game-board');
+        const scoreElement = document.getElementById('score');
+
+        function initBoard() {
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                board[r] = [];
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    board[r][c] = COLORS[Math.floor(Math.random() * COLORS.length)];
+                }
+            }
+            renderBoard();
+        }
+
+        function renderBoard() {
+            boardElement.innerHTML = '';
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE; c++) {
+                    const cell = document.createElement('div');
+                    cell.className = `cell ${board[r][c]}`;
+                    cell.dataset.r = r;
+                    cell.dataset.c = c;
+                    cell.onclick = () => handleCellClick(r, c, cell);
+                    boardElement.appendChild(cell);
+                }
+            }
+        }
+
+        function handleCellClick(r, c, el) {
+            if (!selectedCell) {
+                selectedCell = { r, c, el };
+                el.classList.add('selected');
+            } else {
+                const prev = selectedCell;
+                selectedCell.el.classList.remove('selected');
+                selectedCell = null;
+
+                const dr = Math.abs(prev.r - r);
+                const dc = Math.abs(prev.c - c);
+
+                if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+                    swap(prev.r, prev.c, r, c);
+                }
+            }
+        }
+
+        function swap(r1, c1, r2, c2) {
+            [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
+            renderBoard();
+            setTimeout(checkMatches, 300);
+        }
+
+        function checkMatches() {
+            let found = false;
+            let toRemove = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(false));
+
+            // 横チェック
+            for (let r = 0; r < BOARD_SIZE; r++) {
+                for (let c = 0; c < BOARD_SIZE - 2; c++) {
+                    if (board[r][c] === board[r][c+1] && board[r][c] === board[r][c+2]) {
+                        toRemove[r][c] = toRemove[r][c+1] = toRemove[r][c+2] = true;
+                        found = true;
+                    }
+                }
+            }
+            // 縦チェック
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                for (let r = 0; r < BOARD_SIZE - 2; r++) {
+                    if (board[r][c] === board[r+1][c] && board[r][c] === board[r+2][c]) {
+                        toRemove[r][c] = toRemove[r+1][c] = toRemove[r+2][c] = true;
+                        found = true;
+                    }
+                }
+            }
+
+            if (found) {
+                for(let r=0; r<BOARD_SIZE; r++) {
+                    for(let c=0; c<BOARD_SIZE; c++) {
+                        if(toRemove[r][c]) {
+                            board[r][c] = null;
+                            score += 10;
+                        }
+                    }
+                }
+                scoreElement.innerText = score;
+                dropBlocks();
+                renderBoard();
+                setTimeout(checkMatches, 300);
+            }
+        }
+
+        function dropBlocks() {
+            for (let c = 0; c < BOARD_SIZE; c++) {
+                let writeRow = BOARD_SIZE - 1;
+                for (let r = BOARD_SIZE - 1; r >= 0; r--) {
+                    if (board[r][c] !== null) {
+                        board[writeRow][c] = board[r][c];
+                        if (writeRow !== r) board[r][c] = null;
+                        writeRow--;
+                    }
+                }
+                for (let r = writeRow; r >= 0; r--) {
+                    board[r][c] = COLORS[Math.floor(Math.random() * COLORS.length)];
+                }
+            }
+        }
+
+        initBoard();
+    </script>
+</body>
+</html>
