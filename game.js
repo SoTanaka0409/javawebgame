@@ -37,6 +37,43 @@ function initBoard() {
     renderBoard();
 }
 
+function startGame() {
+    document.getElementById('title-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('flex');
+    document.getElementById('game-screen').classList.remove('hidden');
+    document.getElementById('game-screen').classList.add('flex');
+    
+    score = 0;
+    currentStageIndex = 0;
+    playerHP = playerMaxHP;
+    document.getElementById('score').innerText = score;
+    initStage();
+}
+
+function showResult(isWin) {
+    document.getElementById('game-screen').classList.add('hidden');
+    document.getElementById('game-screen').classList.remove('flex');
+    document.getElementById('result-screen').classList.remove('hidden');
+    document.getElementById('result-screen').classList.add('flex');
+    
+    const title = document.getElementById('result-title');
+    if (isWin) {
+        title.innerText = "GAME CLEAR!";
+        title.className = "text-6xl font-black mb-6 text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]";
+    } else {
+        title.innerText = "GAME OVER...";
+        title.className = "text-6xl font-black mb-6 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]";
+    }
+    document.getElementById('result-score').innerText = score;
+}
+
+function returnToTitle() {
+    document.getElementById('result-screen').classList.add('hidden');
+    document.getElementById('result-screen').classList.remove('flex');
+    document.getElementById('title-screen').classList.remove('hidden');
+}
+
 function initStage() {
     const stageData = stages[currentStageIndex];
     enemyMaxHP = stageData.hp;
@@ -256,10 +293,7 @@ function processTurnEnd() {
             playEnemyAttackAnimation(enemyDamage);
             
             if (playerHP === 0) {
-                setTimeout(() => {
-                    alert("やられてしまった... Game Over");
-                    location.reload();
-                }, 1500);
+                setTimeout(() => showResult(false), 1500);
             }
         }, delay);
     }
@@ -272,8 +306,7 @@ function handleEnemyDefeat() {
         playerHP = playerMaxHP; // 全回復
         initStage();
     } else {
-        alert("すべての敵を倒した！ ゲーム完全クリア！\n最終スコア: " + score);
-        location.reload();
+        showResult(true);
     }
 }
 
@@ -311,6 +344,15 @@ function playPlayerAttackAnimation(damage) {
     setTimeout(() => playEnemyDamageAnimation(damage, false), 150);
 }
 
+function showSlashEffect(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const slash = document.createElement('div');
+    slash.className = 'slash-effect';
+    container.appendChild(slash);
+    setTimeout(() => slash.remove(), 300);
+}
+
 function playEnemyDamageAnimation(damage, isPoison) {
     const enemyImg = document.getElementById('enemy-img');
     if (enemyImg) {
@@ -318,6 +360,7 @@ function playEnemyDamageAnimation(damage, isPoison) {
         void enemyImg.offsetWidth;
         enemyImg.classList.add('anim-damage');
     }
+    if (!isPoison) showSlashEffect('enemy-container');
     showPopup('enemy-container', `-${damage}`, isPoison ? '#a855f7' : '#ff3333');
 }
 
@@ -337,8 +380,7 @@ function playEnemyAttackAnimation(damage) {
             void playerImg.offsetWidth;
             playerImg.classList.add('anim-damage');
         }
+        showSlashEffect('player-container');
         showPopup('player-container', `-${damage}`, '#ff3333');
     }, 150);
 }
-
-initStage();
