@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gy楽試案パズル</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-900 text-white font-sans flex flex-col items-center justify-center min-h-screen">
+    <h1 class="text-3xl font-bold mb-6 text-indigo-400">Gy楽試案パズル</h1>
+
+    <!-- Player & Enemy Status -->
+    <div class="flex w-full max-w-md justify-between mb-4 px-4">
+        <!-- Player -->
+        <div class="flex flex-col items-center w-5/12 relative" id="player-container">
+            <img src="player.png" id="player-img" class="character-img" alt="Player">
+            <span class="font-bold text-blue-300">Player</span>
+            <div class="w-full bg-slate-700 h-4 rounded-full mt-1 overflow-hidden">
+                <div id="player-hp-bar" class="bg-blue-500 h-full w-full transition-all duration-300"></div>
+            </div>
+            <span id="player-hp-text" class="text-xs mt-1">100 / 100</span>
+        </div>
+        <!-- VS -->
+        <div class="flex items-center justify-center w-2/12 font-bold text-xl text-slate-500 flex-col">
+            <span id="stage-indicator" class="text-xs text-indigo-300 mb-1">Stage 1/3</span>
+            <span>VS</span>
+            <span id="turn-counter" class="text-xs text-slate-400 mt-2">Turn: 0</span>
+        </div>
+        <!-- Enemy -->
+        <div class="flex flex-col items-center w-5/12 relative" id="enemy-container">
+            <img src="enemy.png" id="enemy-img" class="character-img" alt="Enemy">
+            <span id="enemy-name" class="font-bold text-red-300">Enemy</span>
+            <div class="w-full bg-slate-700 h-4 rounded-full mt-1 overflow-hidden">
+                <div id="enemy-hp-bar" class="bg-red-500 h-full w-full transition-all duration-300"></div>
+            </div>
+            <div class="flex justify-between w-full mt-1">
+                <span id="enemy-hp-text" class="text-xs">500 / 500</span>
+                <span id="enemy-status" class="text-xs text-purple-400 font-bold"></span>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-board" class="grid grid-cols-6 gap-2 bg-slate-800 p-4 rounded-xl shadow-2xl"></div>
+    <div class="mt-6 text-xl font-bold">スコア: <span id="score">0</span></div>
+    <p class="mt-4 text-slate-400 text-sm">隣り合う2つをクリックして入れ替えよう！</p>
+
+    <!-- 外部スクリプトの読み込み -->
+    <script src="game.js"></script>
+</body>
+</html>

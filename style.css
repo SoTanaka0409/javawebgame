@@ -1,0 +1,55 @@
+.cell {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+.cell:hover { transform: scale(1.05); }
+.selected { outline: 4px solid white; }
+
+/* アニメーション用クラス */
+@keyframes attack {
+    0% { transform: translateX(0); }
+    50% { transform: translateX(50px) scale(1.1); }
+    100% { transform: translateX(0); }
+}
+@keyframes shake {
+    0% { transform: translateX(0); filter: brightness(1); }
+    25% { transform: translateX(-10px); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+    50% { transform: translateX(10px); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+    75% { transform: translateX(-10px); filter: brightness(1.5) sepia(1) hue-rotate(-50deg) saturate(5); }
+    100% { transform: translateX(0); filter: brightness(1); }
+}
+@keyframes popup {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-50px) scale(1.5); opacity: 0; }
+}
+
+.anim-attack { animation: attack 0.3s ease-in-out; z-index: 10; position: relative; }
+.anim-damage { animation: shake 0.3s ease-in-out; }
+
+.damage-popup {
+    position: absolute;
+    color: #ff3333;
+    font-size: 24px;
+    font-weight: bold;
+    text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000;
+    pointer-events: none;
+    animation: popup 1s ease-out forwards;
+    z-index: 50;
+    left: 50%;
+    top: 0;
+    margin-left: -20px;
+}
+
+.character-img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+    margin-bottom: 8px;
+}
