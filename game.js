@@ -97,6 +97,7 @@ function startGame() {
     }
 
     document.getElementById('title-screen').classList.add('hidden');
+    document.getElementById('title-screen').classList.remove('flex');
     document.getElementById('result-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('flex');
     document.getElementById('game-screen').classList.remove('hidden');
@@ -135,6 +136,7 @@ function returnToTitle() {
     document.getElementById('result-screen').classList.add('hidden');
     document.getElementById('result-screen').classList.remove('flex');
     document.getElementById('title-screen').classList.remove('hidden');
+    document.getElementById('title-screen').classList.add('flex');
 }
 
 function initStage() {
