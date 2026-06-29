@@ -312,7 +312,8 @@ async function processCombos() {
         matchHappenedInTurn = true;
         
         if (comboCount > 1) {
-            showPopup('player-container', `${comboCount} COMBO!`, '#ffff00');
+            const firstCell = cluster[0];
+            showComboPopupOnBoard(firstCell.r, firstCell.c, `${comboCount} COMBO!`, '#ffff00');
         }
         playMatchSound(comboCount);
         scoreElement.innerText = Math.floor(score);
@@ -458,6 +459,23 @@ function showPopup(containerId, text, color) {
     popup.style.color = color;
     container.appendChild(popup);
     setTimeout(() => popup.remove(), 1000);
+}
+
+function showComboPopupOnBoard(r, c, text, color) {
+    const board = document.getElementById('game-board');
+    if (!board) return;
+    const popup = document.createElement('div');
+    popup.className = 'combo-popup text-3xl font-black italic drop-shadow-[0_0_5px_rgba(0,0,0,1)]';
+    popup.innerText = text;
+    popup.style.color = color;
+    
+    const top = 33 + r * 54;
+    const left = 33 + c * 54;
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+    
+    board.appendChild(popup);
+    setTimeout(() => popup.remove(), 800);
 }
 
 function playPlayerAttackAnimation(damage) {
