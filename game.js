@@ -548,6 +548,7 @@ function applyEnemyGimmick() {
     if (stageData.name === "スライム") {
         targets.forEach(t => board[t.r][t.c].locked = true);
         showPopup('enemy-container', '粘液バインド！', '#3b82f6');
+        playScreenEffect('ef-slime', '💧');
     } else if (stageData.name === "ゴーレム") {
         targets.forEach(t => {
             board[t.r][t.c].color = 'bg-stone-500';
@@ -555,9 +556,11 @@ function applyEnemyGimmick() {
             board[t.r][t.c].burning = false;
         });
         showPopup('enemy-container', '岩石落とし！', '#78716c');
+        playScreenEffect('ef-golem', '🪨');
     } else if (stageData.name === "ドラゴン") {
         targets.forEach(t => board[t.r][t.c].burning = true);
         showPopup('enemy-container', '炎上！', '#ef4444');
+        playScreenEffect('ef-dragon', '🔥');
     }
     renderBoard();
 }
@@ -576,6 +579,7 @@ function useSkill(type) {
             toRemove[2][i] = toRemove[3][i] = true;
         }
         showSlashEffect('game-board');
+        playScreenEffect('ef-cross');
         playDamageSound();
         executeSkillDestruction(toRemove, 50);
         
@@ -586,6 +590,7 @@ function useSkill(type) {
         if (playerHP > playerMaxHP) playerHP = playerMaxHP;
         updateHP();
         playHealSound();
+        playScreenEffect('ef-heal');
         showPopup('player-container', 'HEAL!', '#f472b6');
         
     } else if (type === 3 && playerMP >= 20) {
@@ -593,6 +598,7 @@ function useSkill(type) {
         updateMP();
         initBoard();
         playSwapSound();
+        playScreenEffect('ef-shuffle');
         showPopup('player-container', 'SHUFFLE!', '#3b82f6');
     }
 }
@@ -696,6 +702,16 @@ function playPlayerAttackAnimation(damage) {
     setTimeout(() => playEnemyDamageAnimation(damage, false), 150);
 }
 
+function playScreenEffect(type, text = '') {
+    const container = document.getElementById('screen-effect-container');
+    if (!container) return;
+    const effect = document.createElement('div');
+    effect.className = `screen-effect ${type}`;
+    if (text) effect.innerText = text;
+    container.appendChild(effect);
+    setTimeout(() => effect.remove(), 1000);
+}
+
 function showSlashEffect(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -722,6 +738,8 @@ function playEnemyDamageAnimation(damage, isPoison) {
 function playEnemyAttackAnimation(damage) {
     const enemyImg = document.getElementById('enemy-img');
     const playerImg = document.getElementById('player-img');
+    
+    playScreenEffect('ef-enemy-attack');
     
     if (enemyImg) {
         enemyImg.style.animation = 'none';

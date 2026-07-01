@@ -16,9 +16,10 @@
     </div>
 
     <!-- GAME SCREEN -->
-    <div id="game-screen" class="hidden flex-col items-center w-full max-w-lg">
+    <div id="game-screen" class="hidden flex-col items-center w-full max-w-lg relative">
+        <div id="screen-effect-container" class="absolute inset-0 pointer-events-none flex items-center justify-center z-50 overflow-hidden"></div>
         <!-- Player & Enemy Status -->
-        <div class="flex w-full max-w-md justify-between mb-4 px-4">
+        <div class="flex w-full max-w-md justify-between mb-4 px-4 relative z-10">
             <!-- Player -->
             <div class="flex flex-col items-center w-5/12 relative" id="player-container">
                 <img src="player.png" id="player-img" class="character-img" alt="Player">

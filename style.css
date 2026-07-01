@@ -152,3 +152,95 @@
     filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 
+/* --- Screen Effects --- */
+.screen-effect {
+    position: absolute;
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Cross Slash */
+.ef-cross {
+    width: 300px;
+    height: 300px;
+    background: 
+        linear-gradient(45deg, transparent 45%, rgba(255,0,0,0.8) 48%, rgba(255,0,0,1) 50%, rgba(255,0,0,0.8) 52%, transparent 55%),
+        linear-gradient(-45deg, transparent 45%, rgba(255,0,0,0.8) 48%, rgba(255,0,0,1) 50%, rgba(255,0,0,0.8) 52%, transparent 55%);
+    filter: drop-shadow(0 0 10px red) drop-shadow(0 0 20px yellow);
+    animation: ef-slash-anim 0.4s ease-out forwards;
+}
+@keyframes ef-slash-anim {
+    0% { transform: scale(0.1); opacity: 1; }
+    80% { transform: scale(1.5); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
+}
+
+/* Heal */
+.ef-heal {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(100,255,100,0.8) 0%, transparent 70%);
+    box-shadow: 0 0 50px rgba(0,255,0,0.8);
+    animation: ef-heal-anim 0.6s ease-out forwards;
+}
+@keyframes ef-heal-anim {
+    0% { transform: scale(0); opacity: 0; }
+    50% { transform: scale(1.5); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+/* Shuffle */
+.ef-shuffle {
+    width: 200px;
+    height: 200px;
+    border: 10px dashed rgba(100,200,255,0.8);
+    border-radius: 50%;
+    animation: ef-shuffle-anim 0.5s ease-in-out forwards;
+}
+@keyframes ef-shuffle-anim {
+    0% { transform: rotate(0deg) scale(0.5); opacity: 1; }
+    100% { transform: rotate(720deg) scale(2); opacity: 0; }
+}
+
+/* Enemy Attack */
+.ef-enemy-attack {
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, transparent 30%, rgba(255,0,0,0.4) 100%);
+    animation: ef-enemy-atk-anim 0.3s forwards;
+}
+@keyframes ef-enemy-atk-anim {
+    0% { opacity: 0; }
+    50% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Gimmicks */
+.ef-slime {
+    font-size: 150px;
+    animation: ef-drop-anim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.ef-golem {
+    font-size: 150px;
+    animation: ef-drop-anim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+.ef-dragon {
+    font-size: 150px;
+    animation: ef-burn-anim 0.8s ease-out forwards;
+    filter: drop-shadow(0 0 20px red);
+}
+@keyframes ef-drop-anim {
+    0% { transform: translateY(-200px) scale(0.5); opacity: 0; }
+    30% { transform: translateY(0) scale(1.2); opacity: 1; }
+    80% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(0) scale(1); opacity: 0; }
+}
+@keyframes ef-burn-anim {
+    0% { transform: scale(0.1) rotate(-10deg); opacity: 0; }
+    30% { transform: scale(2) rotate(10deg); opacity: 1; }
+    80% { transform: scale(2.2) rotate(0deg); opacity: 1; }
+    100% { transform: scale(3) rotate(0deg); opacity: 0; }
+}
