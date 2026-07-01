@@ -1,20 +1,22 @@
 const BOARD_SIZE = 6;
-const COLORS = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 'bg-purple-500'];
+const COLORS = ['bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-pink-500', 'bg-purple-500'];
 let board = [];
 let score = 0;
 let selectedCell = null;
 
-// ステージ定義
+// ステージ定義 (属性を追加)
 const stages = [
-    { name: "スライム", hp: 200, attack: 10, attackTurn: 4, image: "enemy1.png" },
-    { name: "ゴーレム", hp: 500, attack: 20, attackTurn: 3, image: "enemy2.png" },
-    { name: "ドラゴン", hp: 800, attack: 25, attackTurn: 3, image: "enemy.png" }
+    { name: "スライム", hp: 200, attack: 10, attackTurn: 4, image: "enemy1.png", element: "water" },
+    { name: "ゴーレム", hp: 500, attack: 20, attackTurn: 3, image: "enemy2.png", element: "wood" },
+    { name: "ドラゴン", hp: 800, attack: 25, attackTurn: 3, image: "enemy.png", element: "fire" }
 ];
 let currentStageIndex = 0;
 
 // HP管理変数
 let playerMaxHP = 100;
 let playerHP = 100;
+let playerMaxMP = 100;
+let playerMP = 0;
 let enemyMaxHP = stages[currentStageIndex].hp;
 let enemyHP = enemyMaxHP;
 
@@ -59,30 +61,31 @@ function playSwapSound() {
 }
 
 function playMatchSound(combo) {
-    // コンボごとに音程が上がる
     const freq = 440 * Math.pow(1.059463, combo * 2); 
     playTone(freq, 'square', 0.15, 0.08);
 }
 
 function playDamageSound() {
-    // ダメージ用のノイズっぽい音（低いノコギリ波を短く）
     playTone(100, 'sawtooth', 0.2, 0.15);
     setTimeout(() => playTone(120, 'sawtooth', 0.2, 0.15), 50);
 }
 
 function playHealSound() {
-    // ピロリロンという回復音
-    setTimeout(() => playTone(523.25, 'sine', 0.1, 0.1), 0); // C5
-    setTimeout(() => playTone(659.25, 'sine', 0.1, 0.1), 100); // E5
-    setTimeout(() => playTone(783.99, 'sine', 0.2, 0.1), 200); // G5
+    setTimeout(() => playTone(523.25, 'sine', 0.1, 0.1), 0); 
+    setTimeout(() => playTone(659.25, 'sine', 0.1, 0.1), 100); 
+    setTimeout(() => playTone(783.99, 'sine', 0.2, 0.1), 200); 
 }
 // --------------------
+
+function createCell(color) {
+    return { color: color, locked: false, burning: false };
+}
 
 function initBoard() {
     for (let r = 0; r < BOARD_SIZE; r++) {
         board[r] = [];
         for (let c = 0; c < BOARD_SIZE; c++) {
-            board[r][c] = COLORS[Math.floor(Math.random() * COLORS.length)];
+            board[r][c] = createCell(COLORS[Math.floor(Math.random() * COLORS.length)]);
         }
     }
     renderBoard();
@@ -106,6 +109,7 @@ function startGame() {
     score = 0;
     currentStageIndex = 0;
     playerHP = playerMaxHP;
+    playerMP = 0;
     document.getElementById('score').innerText = score;
     initStage();
 }
@@ -124,7 +128,7 @@ function showResult(isWin) {
         title.innerText = "GAME OVER...";
         title.className = "text-6xl font-black mb-6 text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]";
     }
-    document.getElementById('result-score').innerText = score;
+    document.getElementById('result-score').innerText = Math.floor(score);
 }
 
 function returnToTitle() {
@@ -155,15 +159,35 @@ function initStage() {
     
     initBoard();
     updateHP();
+    updateMP();
     updateStatusUI();
 }
 
 function updateHP() {
     document.getElementById('player-hp-bar').style.width = `${Math.max(0, (playerHP / playerMaxHP) * 100)}%`;
-    document.getElementById('player-hp-text').innerText = `${Math.max(0, playerHP)} / ${playerMaxHP}`;
+    document.getElementById('player-hp-text').innerText = `HP: ${Math.max(0, playerHP)}`;
     
     document.getElementById('enemy-hp-bar').style.width = `${Math.max(0, (enemyHP / enemyMaxHP) * 100)}%`;
     document.getElementById('enemy-hp-text').innerText = `${Math.max(0, enemyHP)} / ${enemyMaxHP}`;
+}
+
+function updateMP() {
+    document.getElementById('player-mp-bar').style.width = `${Math.max(0, (playerMP / playerMaxMP) * 100)}%`;
+    document.getElementById('player-mp-text').innerText = `MP: ${Math.max(0, playerMP)}`;
+    
+    // スキルボタンの状態更新
+    const btn1 = document.getElementById('skill-btn-1');
+    const btn2 = document.getElementById('skill-btn-2');
+    const btn3 = document.getElementById('skill-btn-3');
+    
+    if (playerMP >= 30 && !isProcessingTurn) { btn1.classList.remove('opacity-50', 'cursor-not-allowed'); } 
+    else { btn1.classList.add('opacity-50', 'cursor-not-allowed'); }
+    
+    if (playerMP >= 40 && !isProcessingTurn) { btn2.classList.remove('opacity-50', 'cursor-not-allowed'); } 
+    else { btn2.classList.add('opacity-50', 'cursor-not-allowed'); }
+    
+    if (playerMP >= 20 && !isProcessingTurn) { btn3.classList.remove('opacity-50', 'cursor-not-allowed'); } 
+    else { btn3.classList.add('opacity-50', 'cursor-not-allowed'); }
 }
 
 function renderBoard() {
@@ -174,8 +198,13 @@ function renderBoardWithDrops(dropDistances) {
     boardElement.innerHTML = '';
     for (let r = 0; r < BOARD_SIZE; r++) {
         for (let c = 0; c < BOARD_SIZE; c++) {
+            const cellData = board[r][c];
             const cell = document.createElement('div');
-            cell.className = `cell ${board[r][c]}`;
+            cell.className = `cell ${cellData.color}`;
+            
+            if (cellData.locked) cell.classList.add('locked');
+            if (cellData.burning) cell.classList.add('burning');
+            
             cell.dataset.r = r;
             cell.dataset.c = c;
             cell.onclick = () => handleCellClick(r, c, cell);
@@ -191,6 +220,9 @@ function renderBoardWithDrops(dropDistances) {
 }
 
 function handleCellClick(r, c, el) {
+    if (isProcessingTurn) return;
+    if (board[r][c].locked) return; // ロック状態は選択不可
+    
     if (!selectedCell) {
         selectedCell = { r, c, el };
         el.classList.add('selected');
@@ -203,16 +235,28 @@ function handleCellClick(r, c, el) {
         const dc = Math.abs(prev.c - c);
 
         if ((dr === 1 && dc === 0) || (dr === 0 && dc === 1)) {
+            // 交換先のセルもロック確認
+            if (board[r][c].locked) return;
             swap(prev.r, prev.c, r, c);
         }
     }
 }
 
 function swap(r1, c1, r2, c2) {
+    // 炎上ギミック処理
+    if (board[r1][c1].burning || board[r2][c2].burning) {
+        playerHP -= 10;
+        if (playerHP < 0) playerHP = 0;
+        updateHP();
+        showPopup('player-container', '-10', '#ff0000');
+        playDamageSound();
+    }
+
     [board[r1][c1], board[r2][c2]] = [board[r2][c2], board[r1][c1]];
     playSwapSound();
     renderBoard();
     isProcessingTurn = true;
+    updateMP(); // ボタンを無効化
     setTimeout(processCombos, 300);
 }
 
@@ -225,7 +269,10 @@ async function processCombos() {
     // 横チェック
     for (let r = 0; r < BOARD_SIZE; r++) {
         for (let c = 0; c < BOARD_SIZE - 2; c++) {
-            if (board[r][c] && board[r][c] === board[r][c+1] && board[r][c] === board[r][c+2]) {
+            const c1 = board[r][c] ? board[r][c].color : null;
+            const c2 = board[r][c+1] ? board[r][c+1].color : null;
+            const c3 = board[r][c+2] ? board[r][c+2].color : null;
+            if (c1 && c1 !== 'bg-stone-500' && c1 === c2 && c1 === c3) {
                 toRemove[r][c] = toRemove[r][c+1] = toRemove[r][c+2] = true;
                 found = true;
             }
@@ -234,7 +281,10 @@ async function processCombos() {
     // 縦チェック
     for (let c = 0; c < BOARD_SIZE; c++) {
         for (let r = 0; r < BOARD_SIZE - 2; r++) {
-            if (board[r][c] && board[r][c] === board[r+1][c] && board[r][c] === board[r+2][c]) {
+            const c1 = board[r][c] ? board[r][c].color : null;
+            const c2 = board[r+1][c] ? board[r+1][c].color : null;
+            const c3 = board[r+2][c] ? board[r+2][c].color : null;
+            if (c1 && c1 !== 'bg-stone-500' && c1 === c2 && c1 === c3) {
                 toRemove[r][c] = toRemove[r+1][c] = toRemove[r+2][c] = true;
                 found = true;
             }
@@ -253,13 +303,36 @@ async function processCombos() {
         return;
     }
 
+    // 岩ブロックの爆風判定
+    let newToRemove = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(false));
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            newToRemove[r][c] = toRemove[r][c];
+        }
+    }
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if(toRemove[r][c]) {
+                const adjs = [[r-1,c], [r+1,c], [r,c-1], [r,c+1]];
+                for(let [ar, ac] of adjs) {
+                    if (ar >= 0 && ar < BOARD_SIZE && ac >= 0 && ac < BOARD_SIZE) {
+                        if (board[ar][ac] && board[ar][ac].color === 'bg-stone-500') {
+                            newToRemove[ar][ac] = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    toRemove = newToRemove;
+
     // クラスターの抽出
     let clusters = [];
     let visited = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(false));
     
     function floodFill(r, c, color, currentCluster) {
         if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) return;
-        if (!toRemove[r][c] || visited[r][c] || board[r][c] !== color) return;
+        if (!toRemove[r][c] || visited[r][c] || board[r][c].color !== color) return;
         visited[r][c] = true;
         currentCluster.push({r, c});
         floodFill(r+1, c, color, currentCluster);
@@ -272,9 +345,9 @@ async function processCombos() {
         for(let c=0; c<BOARD_SIZE; c++) {
             if (toRemove[r][c] && !visited[r][c]) {
                 let cluster = [];
-                floodFill(r, c, board[r][c], cluster);
-                if (cluster.length >= 3) {
-                    cluster.color = board[r][c]; 
+                floodFill(r, c, board[r][c].color, cluster);
+                if (cluster.length > 0) {
+                    cluster.color = board[r][c].color; 
                     clusters.push(cluster);
                 }
             }
@@ -286,24 +359,46 @@ async function processCombos() {
     let totalPoison = 0;
 
     for (let cluster of clusters) {
-        comboCount++;
-        const color = cluster.color;
+        // 岩ブロックの単独破壊はコンボに含めない
+        if (cluster.color !== 'bg-stone-500') {
+            comboCount++;
+        }
         
+        const color = cluster.color;
         let damage = 0;
         let healAmount = 0;
         let poisonCount = 0;
 
         for (let cell of cluster) {
-            if (color === 'bg-green-500') healAmount += 5;
+            if (color === 'bg-pink-500') healAmount += 5;
             else if (color === 'bg-purple-500') poisonCount += 1;
-            else if (color === 'bg-red-500') damage += 7.5; 
-            else damage += 5;
+            else if (color !== 'bg-stone-500') {
+                // 属性ダメージ計算
+                const enemyElem = stages[currentStageIndex].element;
+                let base = 5;
+                if (color === 'bg-red-500') {
+                    if (enemyElem === 'wood') base *= 2;
+                    else if (enemyElem === 'water') base *= 0.5;
+                } else if (color === 'bg-green-500') {
+                    if (enemyElem === 'water') base *= 2;
+                    else if (enemyElem === 'fire') base *= 0.5;
+                } else if (color === 'bg-blue-500') {
+                    if (enemyElem === 'fire') base *= 2;
+                    else if (enemyElem === 'wood') base *= 0.5;
+                }
+                damage += base;
+            }
+            
+            // MP回復
+            if (color !== 'bg-stone-500') {
+                playerMP += 1;
+            }
             
             const domCell = boardElement.querySelector(`[data-r="${cell.r}"][data-c="${cell.c}"]`);
             if (domCell) domCell.classList.add('anim-pop');
         }
 
-        const comboMultiplier = 1 + (comboCount - 1) * 0.3;
+        const comboMultiplier = 1 + (comboCount > 0 ? (comboCount - 1) * 0.3 : 0);
         totalDamage += damage * comboMultiplier;
         totalHeal += Math.floor(healAmount * comboMultiplier);
         totalPoison += poisonCount;
@@ -311,15 +406,22 @@ async function processCombos() {
         score += cluster.length * 10 * comboMultiplier;
         matchHappenedInTurn = true;
         
-        if (comboCount > 1) {
+        if (comboCount > 1 && color !== 'bg-stone-500') {
             const firstCell = cluster[0];
             showComboPopupOnBoard(firstCell.r, firstCell.c, `${comboCount} COMBO!`, '#ffff00');
         }
-        playMatchSound(comboCount);
+        if (color !== 'bg-stone-500') {
+            playMatchSound(comboCount);
+        } else {
+            playDamageSound(); // 岩が壊れる音
+        }
         scoreElement.innerText = Math.floor(score);
 
         await sleep(300);
     }
+
+    if (playerMP > playerMaxMP) playerMP = playerMaxMP;
+    updateMP();
 
     for(let r=0; r<BOARD_SIZE; r++) {
         for(let c=0; c<BOARD_SIZE; c++) {
@@ -379,7 +481,7 @@ function dropBlocks() {
             }
         }
         for (let r = writeRow; r >= 0; r--) {
-            board[r][c] = COLORS[Math.floor(Math.random() * COLORS.length)];
+            board[r][c] = createCell(COLORS[Math.floor(Math.random() * COLORS.length)]);
             dropDistances[r][c] = nullCount;
         }
     }
@@ -408,7 +510,7 @@ function processTurnEnd() {
         }
     }
 
-    // 敵の攻撃
+    // 敵の攻撃とギミック
     const stageData = stages[currentStageIndex];
     if (turnsCount > 0 && turnsCount % stageData.attackTurn === 0) {
         setTimeout(() => {
@@ -419,18 +521,124 @@ function processTurnEnd() {
             
             playEnemyAttackAnimation(enemyDamage);
             
+            setTimeout(applyEnemyGimmick, 500);
+
             if (playerHP === 0) {
-                setTimeout(() => showResult(false), 1500);
+                setTimeout(() => showResult(false), 2000);
+            } else {
+                updateMP(); // ターン終了時にボタン復帰
             }
         }, delay);
+    } else {
+        updateMP(); // ターン終了時にボタン復帰
     }
+}
+
+function applyEnemyGimmick() {
+    const stageData = stages[currentStageIndex];
+    let targets = [];
+    while(targets.length < 3) {
+        let r = Math.floor(Math.random() * BOARD_SIZE);
+        let c = Math.floor(Math.random() * BOARD_SIZE);
+        if (!targets.some(t => t.r === r && t.c === c) && board[r][c].color !== 'bg-stone-500') {
+            targets.push({r, c});
+        }
+    }
+    
+    if (stageData.name === "スライム") {
+        targets.forEach(t => board[t.r][t.c].locked = true);
+        showPopup('enemy-container', '粘液バインド！', '#3b82f6');
+    } else if (stageData.name === "ゴーレム") {
+        targets.forEach(t => {
+            board[t.r][t.c].color = 'bg-stone-500';
+            board[t.r][t.c].locked = false;
+            board[t.r][t.c].burning = false;
+        });
+        showPopup('enemy-container', '岩石落とし！', '#78716c');
+    } else if (stageData.name === "ドラゴン") {
+        targets.forEach(t => board[t.r][t.c].burning = true);
+        showPopup('enemy-container', '炎上！', '#ef4444');
+    }
+    renderBoard();
+}
+
+function useSkill(type) {
+    if (isProcessingTurn) return;
+    
+    if (type === 1 && playerMP >= 30) {
+        playerMP -= 30;
+        updateMP();
+        isProcessingTurn = true;
+        
+        let toRemove = Array.from({length: BOARD_SIZE}, () => Array(BOARD_SIZE).fill(false));
+        for(let i=0; i<BOARD_SIZE; i++) {
+            toRemove[i][2] = toRemove[i][3] = true;
+            toRemove[2][i] = toRemove[3][i] = true;
+        }
+        showSlashEffect('game-board');
+        playDamageSound();
+        executeSkillDestruction(toRemove, 50);
+        
+    } else if (type === 2 && playerMP >= 40) {
+        playerMP -= 40;
+        updateMP();
+        playerHP += Math.floor(playerMaxHP / 2);
+        if (playerHP > playerMaxHP) playerHP = playerMaxHP;
+        updateHP();
+        playHealSound();
+        showPopup('player-container', 'HEAL!', '#f472b6');
+        
+    } else if (type === 3 && playerMP >= 20) {
+        playerMP -= 20;
+        updateMP();
+        initBoard();
+        playSwapSound();
+        showPopup('player-container', 'SHUFFLE!', '#3b82f6');
+    }
+}
+
+async function executeSkillDestruction(toRemove, extraDamage) {
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if(toRemove[r][c]) {
+                const domCell = boardElement.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+                if (domCell) domCell.classList.add('anim-pop');
+            }
+        }
+    }
+    await sleep(300);
+    
+    for(let r=0; r<BOARD_SIZE; r++) {
+        for(let c=0; c<BOARD_SIZE; c++) {
+            if(toRemove[r][c]) {
+                board[r][c] = null;
+            }
+        }
+    }
+    
+    if (extraDamage > 0) {
+        enemyHP -= extraDamage;
+        if (enemyHP < 0) enemyHP = 0;
+        updateHP();
+        playPlayerAttackAnimation(extraDamage);
+    }
+    
+    if (enemyHP === 0) {
+        setTimeout(handleEnemyDefeat, 1500);
+        return; 
+    }
+    
+    let dropDistances = dropBlocks();
+    renderBoardWithDrops(dropDistances);
+    await sleep(400);
+    processCombos();
 }
 
 function handleEnemyDefeat() {
     if (currentStageIndex < stages.length - 1) {
         alert(`${stages[currentStageIndex].name}を倒した！\nプレイヤーのHPが全回復し、次のステージへ進みます！`);
         currentStageIndex++;
-        playerHP = playerMaxHP; // 全回復
+        playerHP = playerMaxHP; 
         initStage();
     } else {
         showResult(true);

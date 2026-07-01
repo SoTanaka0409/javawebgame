@@ -26,7 +26,13 @@
                 <div class="w-full bg-slate-700 h-4 rounded-full mt-1 overflow-hidden shadow-inner">
                     <div id="player-hp-bar" class="bg-gradient-to-r from-blue-600 to-blue-400 h-full w-full transition-all duration-300"></div>
                 </div>
-                <span id="player-hp-text" class="text-xs mt-1">100 / 100</span>
+                <div class="flex justify-between w-full mt-1">
+                    <span id="player-hp-text" class="text-xs font-bold text-blue-200">100 / 100</span>
+                    <span id="player-mp-text" class="text-xs font-bold text-yellow-200">0 / 100</span>
+                </div>
+                <div class="w-full bg-slate-700 h-2 rounded-full mt-1 overflow-hidden shadow-inner">
+                    <div id="player-mp-bar" class="bg-gradient-to-r from-yellow-500 to-yellow-300 h-full w-0 transition-all duration-300"></div>
+                </div>
             </div>
             <!-- VS -->
             <div class="flex items-center justify-center w-2/12 font-bold text-xl text-slate-500 flex-col">
@@ -49,8 +55,22 @@
         </div>
 
         <div id="game-board" class="grid grid-cols-6 gap-2 bg-slate-800 p-4 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] border border-slate-700"></div>
-        <div class="mt-6 text-2xl font-bold bg-slate-800 px-6 py-2 rounded-full shadow-lg">SCORE: <span id="score" class="text-yellow-400">0</span></div>
-        <p class="mt-4 text-slate-400 text-sm">隣り合う2つのブロックをクリックして入れ替えよう！</p>
+        <div class="mt-4 flex w-full max-w-md justify-between gap-2 px-2">
+            <button id="skill-btn-1" onclick="useSkill(1)" class="flex-1 flex flex-col items-center bg-slate-800 border border-slate-600 rounded-lg py-2 transition active:scale-95 opacity-50 cursor-not-allowed">
+                <span class="text-sm font-bold text-red-400">クロス斬り</span>
+                <span class="text-xs text-slate-400">MP: 30</span>
+            </button>
+            <button id="skill-btn-2" onclick="useSkill(2)" class="flex-1 flex flex-col items-center bg-slate-800 border border-slate-600 rounded-lg py-2 transition active:scale-95 opacity-50 cursor-not-allowed">
+                <span class="text-sm font-bold text-pink-400">ヒール</span>
+                <span class="text-xs text-slate-400">MP: 40</span>
+            </button>
+            <button id="skill-btn-3" onclick="useSkill(3)" class="flex-1 flex flex-col items-center bg-slate-800 border border-slate-600 rounded-lg py-2 transition active:scale-95 opacity-50 cursor-not-allowed">
+                <span class="text-sm font-bold text-blue-400">シャッフル</span>
+                <span class="text-xs text-slate-400">MP: 20</span>
+            </button>
+        </div>
+        <div class="mt-4 text-xl font-bold bg-slate-800 px-6 py-2 rounded-full shadow-lg">SCORE: <span id="score" class="text-yellow-400">0</span></div>
+        <p class="mt-2 text-slate-300 text-xs font-bold drop-shadow">相性: <span class="text-red-400">赤(炎)</span> ＞ <span class="text-green-400">緑(木)</span> ＞ <span class="text-blue-400">青(水)</span> ＞ <span class="text-red-400">赤</span></p>
     </div>
 
     <!-- RESULT SCREEN -->
