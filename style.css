@@ -155,92 +155,130 @@
 /* --- Screen Effects --- */
 .screen-effect {
     position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
     pointer-events: none;
     display: flex;
     justify-content: center;
     align-items: center;
+    overflow: hidden;
+    border-radius: 1rem; /* Match game-board rounded-2xl */
 }
 
 /* Cross Slash */
 .ef-cross {
-    width: 300px;
-    height: 300px;
-    background: 
-        linear-gradient(45deg, transparent 45%, rgba(255,0,0,0.8) 48%, rgba(255,0,0,1) 50%, rgba(255,0,0,0.8) 52%, transparent 55%),
-        linear-gradient(-45deg, transparent 45%, rgba(255,0,0,0.8) 48%, rgba(255,0,0,1) 50%, rgba(255,0,0,0.8) 52%, transparent 55%);
-    filter: drop-shadow(0 0 10px red) drop-shadow(0 0 20px yellow);
-    animation: ef-slash-anim 0.4s ease-out forwards;
+    width: 100%; height: 100%;
 }
-@keyframes ef-slash-anim {
-    0% { transform: scale(0.1); opacity: 1; }
-    80% { transform: scale(1.5); opacity: 1; }
-    100% { transform: scale(2); opacity: 0; }
+.ef-cross::before, .ef-cross::after {
+    content: "";
+    position: absolute;
+    width: 0; height: 30px;
+    background: #fff;
+    box-shadow: 0 0 20px #f00, 0 0 40px #f00, 0 0 80px #f00;
+    border-radius: 15px;
+    transform-origin: center;
+    opacity: 0;
+}
+.ef-cross::before {
+    transform: rotate(45deg);
+    animation: ef-slash-1 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+.ef-cross::after {
+    transform: rotate(-45deg);
+    animation: ef-slash-2 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) 0.15s forwards;
+}
+@keyframes ef-slash-1 {
+    0% { width: 0; opacity: 1; }
+    50% { width: 150%; opacity: 1; }
+    100% { width: 150%; opacity: 0; filter: blur(10px); }
+}
+@keyframes ef-slash-2 {
+    0% { width: 0; opacity: 1; }
+    50% { width: 150%; opacity: 1; }
+    100% { width: 150%; opacity: 0; filter: blur(10px); }
 }
 
 /* Heal */
 .ef-heal {
-    width: 200px;
-    height: 200px;
-    border-radius: 50%;
-    background: radial-gradient(circle, rgba(100,255,100,0.8) 0%, transparent 70%);
-    box-shadow: 0 0 50px rgba(0,255,0,0.8);
-    animation: ef-heal-anim 0.6s ease-out forwards;
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, rgba(100,255,100,0.4) 0%, transparent 60%);
+    animation: ef-heal-bg 0.8s ease-out forwards;
 }
-@keyframes ef-heal-anim {
-    0% { transform: scale(0); opacity: 0; }
-    50% { transform: scale(1.5); opacity: 1; }
-    100% { transform: scale(3); opacity: 0; }
+.ef-heal::before {
+    content: "✚";
+    font-size: 200px;
+    color: #4ade80;
+    text-shadow: 0 0 40px #22c55e, 0 0 80px #166534;
+    animation: ef-heal-icon 0.8s ease-out forwards;
+}
+@keyframes ef-heal-bg {
+    0% { opacity: 0; transform: scale(0.5); }
+    50% { opacity: 1; transform: scale(1.5); }
+    100% { opacity: 0; transform: scale(2); }
+}
+@keyframes ef-heal-icon {
+    0% { transform: scale(0) translateY(50px); opacity: 0; }
+    30% { transform: scale(1) translateY(0); opacity: 1; }
+    100% { transform: scale(1.5) translateY(-50px); opacity: 0; filter: blur(5px); }
 }
 
 /* Shuffle */
 .ef-shuffle {
-    width: 200px;
-    height: 200px;
-    border: 10px dashed rgba(100,200,255,0.8);
+    width: 150%; height: 150%;
     border-radius: 50%;
-    animation: ef-shuffle-anim 0.5s ease-in-out forwards;
+    background: conic-gradient(from 0deg, transparent 0%, rgba(59, 130, 246, 0.6) 30%, transparent 60%);
+    animation: ef-shuffle-anim 0.6s linear forwards;
 }
 @keyframes ef-shuffle-anim {
-    0% { transform: rotate(0deg) scale(0.5); opacity: 1; }
-    100% { transform: rotate(720deg) scale(2); opacity: 0; }
+    0% { transform: rotate(0deg) scale(0); opacity: 1; }
+    50% { transform: rotate(360deg) scale(1); opacity: 1; }
+    100% { transform: rotate(720deg) scale(1.5); opacity: 0; }
 }
 
 /* Enemy Attack */
 .ef-enemy-attack {
-    width: 100vw;
-    height: 100vh;
-    background: radial-gradient(circle, transparent 30%, rgba(255,0,0,0.4) 100%);
+    width: 100vw; height: 100vh;
+    background: rgba(255,0,0,0.3);
     animation: ef-enemy-atk-anim 0.3s forwards;
 }
 @keyframes ef-enemy-atk-anim {
-    0% { opacity: 0; }
-    50% { opacity: 1; }
-    100% { opacity: 0; }
+    0% { opacity: 0; box-shadow: inset 0 0 0px red; }
+    50% { opacity: 1; box-shadow: inset 0 0 100px red; }
+    100% { opacity: 0; box-shadow: inset 0 0 0px red; }
 }
 
 /* Gimmicks */
 .ef-slime {
-    font-size: 150px;
-    animation: ef-drop-anim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    font-size: 200px;
+    text-shadow: 0 0 50px #3b82f6;
+    animation: ef-slime-anim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
+@keyframes ef-slime-anim {
+    0% { transform: translateY(-300px) scale(0.5); opacity: 0; filter: blur(10px); }
+    30% { transform: translateY(0) scale(1.5); opacity: 1; filter: blur(0); }
+    80% { transform: translateY(0) scale(1.5); opacity: 1; }
+    100% { transform: translateY(100px) scale(2); opacity: 0; }
+}
+
 .ef-golem {
-    font-size: 150px;
-    animation: ef-drop-anim 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    font-size: 250px;
+    text-shadow: 0 0 50px #78716c;
+    animation: ef-golem-anim 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
+@keyframes ef-golem-anim {
+    0% { transform: translateY(-400px) rotate(-45deg); opacity: 0; }
+    30% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    80% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(0) scale(1.2); opacity: 0; filter: blur(10px); }
+}
+
 .ef-dragon {
-    font-size: 150px;
-    animation: ef-burn-anim 0.8s ease-out forwards;
-    filter: drop-shadow(0 0 20px red);
+    font-size: 250px;
+    text-shadow: 0 0 80px #ef4444, 0 0 150px #f97316;
+    animation: ef-dragon-anim 0.8s ease-out forwards;
 }
-@keyframes ef-drop-anim {
-    0% { transform: translateY(-200px) scale(0.5); opacity: 0; }
-    30% { transform: translateY(0) scale(1.2); opacity: 1; }
-    80% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(0) scale(1); opacity: 0; }
-}
-@keyframes ef-burn-anim {
-    0% { transform: scale(0.1) rotate(-10deg); opacity: 0; }
-    30% { transform: scale(2) rotate(10deg); opacity: 1; }
-    80% { transform: scale(2.2) rotate(0deg); opacity: 1; }
-    100% { transform: scale(3) rotate(0deg); opacity: 0; }
+@keyframes ef-dragon-anim {
+    0% { transform: scale(0.1) translateY(200px); opacity: 0; }
+    30% { transform: scale(2) translateY(0); opacity: 1; }
+    80% { transform: scale(2.2) translateY(0); opacity: 1; }
+    100% { transform: scale(3) translateY(-100px); opacity: 0; filter: blur(20px); }
 }
